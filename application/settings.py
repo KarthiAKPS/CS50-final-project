@@ -32,7 +32,15 @@ INSTALLED_APPS = [
     'tailwind',
     'theme', #tailwind theme
     'django_browser_reload', #automatic css refresh
+    "crispy_forms",
+    "crispy_tailwind",
+    'rest_framework',
 ]
+
+# for crispy forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
+
+CRISPY_TEMPLATE_PACK = "tailwind"
 
 # for tailwind
 TAILWIND_APP_NAME = 'theme'
@@ -41,6 +49,7 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+# npm location
 NPM_BIN_PATH = "C:/Program Files/nodejs/npm.cmd"
 
 MIDDLEWARE = [
