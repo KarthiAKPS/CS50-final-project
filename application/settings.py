@@ -29,7 +29,19 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'storages', #for s3,
+    'tailwind',
+    'theme', #tailwind theme
+    'django_browser_reload', #automatic css refresh
 ]
+
+# for tailwind
+TAILWIND_APP_NAME = 'theme'
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
+
+NPM_BIN_PATH = "C:/Program Files/nodejs/npm.cmd"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -39,6 +51,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django_browser_reload.middleware.BrowserReloadMiddleware",
 ]
 
 ROOT_URLCONF = 'application.urls'
@@ -46,7 +59,7 @@ ROOT_URLCONF = 'application.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -116,6 +129,14 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# # BASE_DIR = Path(__file__).resolve().parent
+
+# TAILWINDCSS_CLI_FILE = BASE_DIR / 'tailwindcss-linux-x64'
+# TAILWINDCSS_CONFIG_FILE = BASE_DIR / 'tailwind.config.js'
+
+# # For file mode
+# TAILWINDCSS_OUTPUT_FILE = 'style.css'
 
 # for dev environment
 if DEBUG:
