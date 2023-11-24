@@ -1,10 +1,20 @@
 from django.db import models
 from django.utils import timezone
+import string
+import random
+from django.contrib.auth.models import AbstractUser
+
+def RoomCode():
+    l = 8;
+    while TRUE:
+        code = ''.join(random.choice(string.ascii, k=l))
+        if Room.objects.filter(code=code).count() == 0:
+            break
+    return code
 
 
-class User(models.Model):
-    spotify_id = models.CharField(max_length=255, unique=True)
-    username = models.CharField(max_length=255)
+class User(AbstractUser):
+    spotify_id = models.CharField(max_length=255, unique=True, default=None)
     email = models.EmailField()
     like_dislike_ratio = models.FloatField(default=0.5)
     
@@ -28,6 +38,7 @@ class UserAction(models.Model):
 
 class Room(models.Model):
     name = models.CharField(max_length=255)
+    code = models.CharField(max_length=8, unique=True, default='')
     current_playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE, null=True, related_name='current_playlist')
     playlist_1 = models.ForeignKey(Playlist, on_delete=models.CASCADE, null=True, related_name='playlist_1')
     playlist_2 = models.ForeignKey(Playlist, on_delete=models.CASCADE, null=True, related_name='playlist_2')
@@ -41,8 +52,8 @@ class RoomVote(models.Model):
     
 
 class Comment(models.Model):
-    room = models.ForeignKey('rooms.Room', on_delete=models.CASCADE)
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     

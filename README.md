@@ -1,11 +1,11 @@
 # CS50-final-project
 Final project of CS50 course.
 
-## MUSIX MATCH
+# MUSIX MATCH
 ## Music Streaming Social Web Application
 
 
-# Project Description
+### Project Description
 
 My project idea is to create a music streaming social web application. The main features of the application include:
 

@@ -22,6 +22,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 
 INSTALLED_APPS = [
     'main',
+    'frontend',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -156,7 +157,7 @@ if DEBUG:
         )
 
 MEDIA_URL ='media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'frontend', 'static', 'media')
 
 # AWS Storage Bucket
 if not DEBUG:

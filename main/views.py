@@ -5,8 +5,15 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from .models import User, Playlist, Room, RoomVote, PlaylistSong, UserAction
+from rest_framework import generics
+from .serializer import RoomSerializer
 
 # Create your views here.
+
+class RoomView(generics.ListAPIView):
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer
+
 def index(request):
     return render(request, 'main/index.html')
 
