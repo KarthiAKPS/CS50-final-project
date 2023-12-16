@@ -1,7 +1,13 @@
 from rest_framework import serializers
-from .models import Room
+from .models import RoomPrivate
 
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Room
-        fields = ('id', 'name', 'code', 'current_playlist', 'playlist_1', 'playlist_2', 'created_at')
+        model = RoomPrivate
+        fields = ('id', 'name', 'code', 'playlist', 'created_time', 'votes_to_skip', 'guest_can_pause', 'created_user', 'host', 'is_public')
+        
+
+class CreateRoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RoomPrivate
+        fields = ('name', 'votes_to_skip', 'guest_can_pause', 'is_public' )

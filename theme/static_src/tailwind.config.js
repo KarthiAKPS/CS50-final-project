@@ -58,5 +58,18 @@ module.exports = {
         require('@tailwindcss/typography'),
         require('@tailwindcss/line-clamp'),
         require('@tailwindcss/aspect-ratio'),
+        function({ addUtilities }) {
+            const newUtilities = {
+              '.scrollbar-hide': {
+                '::-webkit-scrollbar': {
+                  display: 'none',
+                },
+                '-ms-overflow-style': 'none',
+                'scrollbar-width': 'none',
+              },
+            }
+            addUtilities(newUtilities)
+          }
     ],
+    darkMode: 'class',
 }

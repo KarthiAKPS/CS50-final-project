@@ -1,21 +1,60 @@
+from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
-from .models import User, Playlist, Room, RoomVote, PlaylistSong, UserAction
-from rest_framework import generics
-from .serializer import RoomSerializer
+from .models import RoomPublic, User, Playlist, RoomPrivate, PlaylistSong, UserAction
+from rest_framework import generics, status
+from .serializer import RoomSerializer, CreateRoomSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
 
 # Create your views here.
 
 class RoomView(generics.ListAPIView):
-    queryset = Room.objects.all()
+    queryset = RoomPrivate.objects.all()
     serializer_class = RoomSerializer
-
-def index(request):
-    return render(request, 'main/index.html')
+    
+class CreateRoomView(APIView):
+    serializer_class = CreateRoomSerializer
+    def post(self, request, format=None):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+              
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            guest_can_pause = serializer.data.get('guest_can_pause')
+            name = serializer.data.get('name')
+            votes_to_skip = serializer.data.get('votes_to_skip')
+            host = self.request.session.session_key
+            is_public = serializer.data.get('is_public')
+            queryset = RoomPrivate.objects.filter(host=host)
+            if queryset.exists():
+               room = queryset[0]
+               room.name = name
+               room.is_public = is_public
+               room.guest_can_pause = guest_can_pause
+               room.votes_to_skip = votes_to_skip
+               room.created_time = timezone.now()
+               room.save(update_fields=['votes_to_skip', 'guest_can_pause', 'created_time', 'is_public'])
+               return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
+            else:
+                room = RoomPrivate(
+                    host=host,
+                    guest_can_pause=guest_can_pause,
+                    votes_to_skip=votes_to_skip,
+                    created_time= timezone.now(),
+                    name =name,
+                    # created_user=request.user
+                    )
+                room.save()
+                    
+            return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
+        return Response({'Bad Request': 'Invalid data'}, status=status.HTTP_400_BAD_REQUEST)
+            
 
 def login_view(request):
     if request.method == "POST":
@@ -93,21 +132,21 @@ def playlist_view(request):
 
 # Room View
 @login_required
-def room_view(request, room_name):
-    room = Room.objects.get(name=room_name)
+def public_room_view(request, room_name):
+    room = RoomPublic.objects.get(name=room_name)
     current_playlist = room.current_playlist
     playlist_1 = room.playlist_1
     playlist_2 = room.playlist_2
 
     # Check if user has already voted for a playlist in this room
-    user_vote = RoomVote.objects.filter(user=request.user, room=room).first()
+    user_vote = RoomPublic.objects.filter(user=request.user, room=room).first()
 
     # Handle user vote for playlist
     if request.method == 'POST':
         playlist_id = request.POST.get('playlist_id')
         rank = request.POST.get('rank')  # 1 for first choice, 2 for second choice
         if playlist_id and rank:
-            room_vote, _ = RoomVote.objects.get_or_create(user=request.user, room=room, playlist_id=playlist_id, rank=rank)
+            room_vote, _ = RoomPublic.objects.get_or_create(user=request.user, room=room, playlist_id=playlist_id, rank=rank)
             room_vote.save()
 
     # Determine the next playlist to play based on votes and daily performance
@@ -141,4 +180,4 @@ def room_view(request, room_name):
         room.playlist_2 = playlist_2
         room.save()
 
-    return render(request, 'room_view.html', {'room': room, 'current_playlist': current_playlist, 'playlist_1': playlist_1, 'playlist_2': playlist_2, 'user_vote': user_vote})
+    return render(request, 'room.html', {'room': room, 'current_playlist': current_playlist, 'playlist_1': playlist_1, 'playlist_2': playlist_2, 'user_vote': user_vote})

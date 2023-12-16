@@ -1,20 +1,28 @@
-import React, { Component } from 'react';
+import React from 'react';
 import {render} from 'react-dom';
 import Homepage from './Homepage';
+import Profile from './profile';
+import Room from './room';
+import Login from './login';
+import CreateRoom from './CreateRoom';
+import JoinRoom from './joinRoom';
+import { BrowserRouter as Router, Routes, Route, Link, Redirect } from 'react-router-dom';
 
-export default class App extends Component {
-    constructor(props) {
-        super(props);
-    }
+export default function App(){
 
-    render(){
         return(
-            <div>
-                <Homepage />
-            </div>
+            <Router>
+                <Routes>
+                    <Route path="/" exact element={<Homepage/>}></Route>
+                    <Route path="/profile" element={<Profile/>}></Route>
+                    <Route path="/room/:roomCode" element={<Room/>}></Route>
+                    <Route path="/login" element={<Login/>}></Route>
+                    <Route path="/create" element={<CreateRoom/>}></Route>
+                    <Route path="/join" element={<JoinRoom/>}></Route>
+                </Routes>
+            </Router>
         )
     }
-}
 
 const appdiv = document.getElementById("app");
 render(<App />, appdiv);

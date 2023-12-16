@@ -1,3 +1,4 @@
+const forms = require('@tailwindcss/forms');
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -10,6 +11,20 @@ module.exports = {
       },
     },
   },
-  plugins: [],
-}
+  plugins: [
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.scrollbar-hide': {
+          '::-webkit-scrollbar': {
+            display: 'none',
+          },
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+        },
+      }
+      addUtilities(newUtilities)
+    },
+    forms,
+  ],
+  }
 
