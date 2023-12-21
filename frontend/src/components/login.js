@@ -19,7 +19,7 @@ export default function Login(){
                     <div className='flex my-4 justify-center'>
                         <button
                             className='bg-gradient-to-r from-sky-300 to-sky-600 text-white font-bold px-2 py-1 rounded-md'
-                        >Login</button>
+                        >LOGIN</button>
                     </div>
                 </div>
                 </div>

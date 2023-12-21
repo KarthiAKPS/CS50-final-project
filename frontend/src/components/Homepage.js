@@ -1,15 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Redirect } from 'react-router-dom';
+import { BrowserRouter as Router, useNavigate, Routes, Route, Link, Redirect } from 'react-router-dom';
 
 export default function Homepage(){
 
     const [data, setData] = useState(null);
+    const navigate = useNavigate();
+
+    const getCsrfToken = () => {
+        const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken'));
+        return cookie ? cookie.split('=')[1] : null;
+    };
+    
+    const csrftoken = getCsrfToken();
 
     useEffect(() => {
         fetch('/apis/room')
             .then(response => response.json())
             .then(data => setData(data));
     }, []);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            const response = await fetch('/apis/in-room');
+            const data = await response.json();
+            if (data.message !== 'Room Not Found') {
+                console.log(data.code);
+                await navigate(`/room/${data.code}`);
+            }
+        }
+        fetchData();
+    }, []);
+
+    const handleSubmit = (roomCode) => {
+        
+        fetch('/apis/join-room', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify({
+                code: roomCode,  // roomCode is the value of the input field, the key - value pair is code: roomCode, key should be similar to that of in the backend views.py
+            })
+        }).then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error(`Server responded with status code ${response.status}`);
+            }
+        }).then(data => {
+            navigate(`/room/${roomCode}`);
+        }).catch(error => {
+            console.log(error);
+            alert('Room not found');
+        });
+    };
 
         return(
             <>
@@ -41,8 +86,11 @@ export default function Homepage(){
                                 })
                             }, {item.is_public ? (<div className="text-green-500 leading-loose text-center">Public</div>) : (<div className="text-red-500 leading-loose text-center">Private</div>)}</p>
                             </div>
-                            {item.is_public && <Link to={`/room/${item.code}`} className="btn w-100 font-bold float-right bg-gradient-to-r from-green-300 to-green-600 text-white px-2 py-1 rounded-md">Join</Link>}
-                            
+                            {item.is_public && <button onClick={(event) => {
+                                event.preventDefault();
+                                handleSubmit(item.code);
+                            }} className="btn w-100 font-bold float-right bg-gradient-to-r from-green-300 to-green-600 text-white px-2 py-1 rounded-md">JOIN</button>}
+                                                        
                         </div>
                     ))}
                 </div>

@@ -153,11 +153,12 @@ if DEBUG:
     STATIC_URL = 'static/'
     STATIC_ROOT = os.path.join(BASE_DIR, 'statifiles_build', 'static')
     STATICFILES_DIRS = (
-        os.path.join(BASE_DIR, 'static'),
+        BASE_DIR / 'frontend' / 'static',
+        BASE_DIR / 'theme' / 'static',
         )
 
 MEDIA_URL ='media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'frontend', 'static', 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'frontend', 'media')
 
 # AWS Storage Bucket
 if not DEBUG:

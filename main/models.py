@@ -16,6 +16,7 @@ class User(AbstractUser):
     spotify_id = models.CharField(max_length=255, unique=True, default=None, null=True)
     email = models.EmailField()
     like_dislike_ratio = models.FloatField(default=0.5)
+    profile_pic = models.ImageField(upload_to='profile_pics', default='default.jpg')
     
     
 class Playlist(models.Model):
@@ -54,6 +55,7 @@ class RoomPrivate(models.Model):
     votes_to_skip = models.IntegerField(default=1)
     guest_can_pause = models.BooleanField(default=False)
     is_public = models.BooleanField(default=True)
+    is_creator = models.BooleanField(default=True)
     current_song_id = models.CharField(max_length=255, default=None, null=True, blank=True)
     
      

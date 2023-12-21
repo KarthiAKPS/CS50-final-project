@@ -45,7 +45,8 @@ module.exports = {
         extend: {
             colors: {
                 black : '#000000'
-            }
+            },
+            backgroundColor: ['active'],
         },
     },
     plugins: [

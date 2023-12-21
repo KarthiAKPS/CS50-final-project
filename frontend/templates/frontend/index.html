@@ -1,7 +1,10 @@
-{% extends "frontend/layout.html" %} {% block body %}
+{% extends "frontend/layout.html" %} 
+{% load static %} // Add this line to load the static template tag library
+{% block body %}
+{% static "frontend/media/5183000.jpg" as background_img_url %}
 
 <div id="main" class="h-full w-full fixed top-0 left-0">
-    <div id="app" class="h-full w-full flex flex-col bg-[url('{% static "frontend/static/media/5183000.jpg" %}')]"></div>
+    <div id="app" class="h-full w-full flex flex-col bg-[url('{{background_img_url}}')]"></div>
 </div>
 
 {% endblock %}

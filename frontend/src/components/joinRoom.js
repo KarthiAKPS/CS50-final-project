@@ -5,9 +5,39 @@ export default function JoinRoom() {
     const [roomCode, setRoomCode] = useState('');
     const navigate = useNavigate();
 
+    /**
+     * Retrieves the CSRF token from the document cookie.
+     * @returns {string|null} The CSRF token or null if not found.
+     */
+    const getCsrfToken = () => {
+        const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken'));
+        return cookie ? cookie.split('=')[1] : null;
+    };
+
+    const csrftoken = getCsrfToken();
     const handleSubmit = (event) => {
         event.preventDefault();
-        navigate(`/room/${roomCode}`);
+        fetch('/apis/join-room', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify({
+                code: roomCode,  // roomCode is the value of the input field, the key - value pair is code: roomCode, key should be similar to that of in the backend views.py
+            })
+        }).then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error(`Server responded with status code ${response.status}`);
+            }
+        }).then(data => {
+            navigate(`/room/${roomCode}`);
+        }).catch(error => {
+            console.log(error);
+            alert('Room not found');
+        });
     };
 
     return (
@@ -26,7 +56,7 @@ export default function JoinRoom() {
                         <button
                             className='font-bold bg-gradient-to-r from-sky-300 to-sky-600 text-white px-2 py-1 rounded-md'
                             onClick={handleSubmit}
-                        >Join</button>
+                        >JOIN</button>
                     </div>
                 </div>
             </div>
