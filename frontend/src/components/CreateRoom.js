@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, useNavigate, Routes, Route, Link, Redirect } from 'react-router-dom';
 
-export default function CreateRoom({ settingsShow = false, setSettingsShow, codeState='', name = '', guestCanPauseState = true, votesToSkipProp = 2, isPublicState = true }) {
+export default function CreateRoom({updateRoomData, settingsShow = false, setSettingsShow, codeState='', name = '', guestCanPauseState = true, votesToSkipProp = 2, isPublicState = true }) {
     const [roomName, setRoomName] = useState(name);
     const [guestCanPause, setGuestCanPause] = useState(guestCanPauseState);
     const [votesToSkip, setVotesToSkip] = useState(votesToSkipProp);
@@ -65,6 +65,7 @@ export default function CreateRoom({ settingsShow = false, setSettingsShow, code
             });
     }
 
+    
     const handleSubmitEdit = () => {
         console.log('edit clicked');
         // Get the values from the input fields
@@ -78,7 +79,6 @@ export default function CreateRoom({ settingsShow = false, setSettingsShow, code
         if (roomName === '' || guestCanPause === '' || votesToSkip === '') {
             alert('All fields are required!');
         };
-
 
         // Make the HTTP request to the backend
         const request = {
@@ -94,15 +94,17 @@ export default function CreateRoom({ settingsShow = false, setSettingsShow, code
                 votes_to_skip: votestoskip,
                 is_public: ispublic,
                 code: roomcode,
-            })
+            }),
         };
 
         fetch('/apis/edit-room', request)
             .then(response => response.json())
             .then(data => {
+                updateRoomData(data);
                 // Navigate to the new room
                 navigate(`/room/${data.code}`);
                 console.log(data);
+                setSettingsShow(false);
             })
             .catch(error => {
                 // Handle any errors that occur during the request

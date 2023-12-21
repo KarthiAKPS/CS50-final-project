@@ -62,7 +62,7 @@ export default function Room() {
     return (
         <>
             {settingsShow ? (
-            <CreateRoom update={true} settingsShow={settingsShow} setSettingsShow={setSettingsShow} votesToSkipProp={roomData.votes_to_skip} name={roomData.name} guestCanPauseState={roomData.guest_can_pause} isPublicState={roomData.isPublic} codeState={roomData.code} updateCallback={() => {}}/>
+            <CreateRoom update={true} updateRoomData={setRoomData} settingsShow={settingsShow} setSettingsShow={setSettingsShow} votesToSkipProp={roomData.votes_to_skip} name={roomData.name} guestCanPauseState={roomData.guest_can_pause} isPublicState={roomData.isPublic} codeState={roomData.code} updateCallback={() => alert('Room data updated')}/>
         ) : (
             <div className='flex flex-col gap-2'>
                 {roomData.is_creator ? (<div className='flex justify-end w-screen shadow-lg bg-gradient-to-b from-sky-300 to-sky-600 text-white'>

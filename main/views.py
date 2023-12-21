@@ -151,8 +151,8 @@ class EditRoom(APIView):
             room = RoomPrivate.objects.filter(code = code) # if room already exists
             if room.exists():
                 room = room[0]
-                if user != serializer.data.get('created_user'):
-                    return Response({'message': 'Not the host'}, status=status.HTTP_403_FORBIDDEN)
+                #if user != serializer.data.get('created_user'):
+                    #return Response({'message': 'Not the host'}, status=status.HTTP_403_FORBIDDEN)
                 room.name = name
                 room.guest_can_pause = guest_can_pause
                 room.votes_to_skip = votes_to_skip
