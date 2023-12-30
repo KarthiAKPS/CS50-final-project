@@ -37,7 +37,12 @@ INSTALLED_APPS = [
     "crispy_forms",
     "crispy_tailwind",
     'rest_framework',
+    #'django_crontab',
 ]
+
+# CRONJOBS = [
+#     ('*/1 * * * *', 'main.views.delete_expired_rooms')  # Runs every 1 minutes
+# ]
 
 # for crispy forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"

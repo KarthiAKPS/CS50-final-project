@@ -43,11 +43,10 @@ def update_or_create_user_tokens(session_id, access_token, token_type, expires_i
         tokens.expires_in = expires_in
         tokens.save(update_fields=['access_token', 'refresh_token', 'expires_in', 'token_type'])
 
-    handle_spotify_login(access_token=access_token)
 
     return HttpResponse('Access token set')
 
-def is_spotify_authenticated( session_id):
+def is_spotify_authenticated(session_id):
     tokens = get_user_tokens(session_id)
     if tokens:
         expiry = tokens.expires_in
@@ -79,20 +78,24 @@ def refresh_spotify_token(session_id):
         session_id=session_id, access_token=access_token, token_type=token_type, expires_in=expires_in, refresh_token=new_refresh_token)
     
 
-def spotify_api_requests(session_id, endpoint, post_request=False, put_request=False):
+def spotify_api_requests(session_id, endpoint, put_request=False):
     tokens = get_user_tokens(session_id)
     headers = {'Content-Type': 'application/json',
                'Authorization': "Bearer " + tokens.access_token}
 
-    if post_request:
-        post(BASE_URL + endpoint, headers=headers)
+    response = None
     if put_request:
-        put(BASE_URL + endpoint, headers=headers)
+        response = put(BASE_URL + endpoint, headers=headers)
+    else:
+        response = get(BASE_URL + endpoint, {}, headers=headers)
 
-    response = get(BASE_URL + endpoint, {}, headers=headers)
+    if response.status_code == 403:
+        print("Status Code:", response.status_code)
+        print(response.json()) 
     try:
         return response.json()
-    except:
+    except Exception as e:
+        print("Error:", e)
         return {'Error': 'Issue with request'}
 
 class AuthURL(APIView):
@@ -133,6 +136,8 @@ def spotify_callback(request, format=None):
         'client_secret': CLIENT_SECRET,
     }).json()
 
+    print(response) 
+
     access_token = response.get('access_token')
     token_type = response.get('token_type')
     refresh_token = response.get('refresh_token')
@@ -149,34 +154,34 @@ def spotify_callback(request, format=None):
         # The state parameters do not match, handle the error
         request.session['state'] = callback_state
         
-    update_or_create_user_tokens(
+    update_or_create_user_tokens( 
         request.session.session_key,  access_token=access_token, token_type=token_type, expires_in=expires_in, refresh_token=refresh_token)
-    
-    handle_spotify_login( access_token = access_token, state = callback_state)
 
     return redirect('frontend:index')
 
 
 class IsAuthenticated(APIView):
-    def get(self, format=None):
+    def get(self,request, format=None):
         is_authenticated = is_spotify_authenticated(
             self.request.session.session_key)
         return Response({'status': is_authenticated}, status=status.HTTP_200_OK)
     
 class CurrentSong(APIView):
-    def get(self, format=None):
+    def get(self, request, format=None):
         if not self.request.session.exists(self.request.session.session_key):
             self.request.session.create()
         room_code = self.request.session.get('state')
         room = RoomPrivate.objects.filter(code=room_code)
         if room.exists():
             room = room[0]
+            host = room.host
+            endpoint = "me/player/currently-playing"
+            response = spotify_api_requests(host, endpoint)
         else:
-            return Response({}, status=status.HTTP_404_NOT_FOUND)
-        host = room.host
-        endpoint = "me/player/currently-playing"
-        response = spotify_api_requests(host, endpoint)
-
+            host = self.request.session.session_key
+            endpoint = "me/player/currently-playing"
+            response = spotify_api_requests(host, endpoint)
+        
         if 'error' in response or 'item' not in response:
             return Response({}, status=status.HTTP_204_NO_CONTENT)
 
@@ -213,90 +218,49 @@ class UserProfile(APIView):
     def get(self, *args, **kwargs):
         if not self.request.session.exists(self.request.session.session_key):
             self.request.session.create()
-        u_code = self.request.session.get('state')
-        user = User.objects.filter(code=u_code)
-        print("users: ", user)
-        if user.exists():
-            user = user[0]
-            endpoint = "me"
-            session_key = self.request.session.session_key
-            response = spotify_api_requests(session_key, endpoint)
-            needed_response = {
-                'display_name': response.get('display_name'),
-                'followers': response.get('followers').get('total'),
-                'id': response.get('id'),
-                'image': response.get('images')[0].get('url')}
-            print(needed_response)
-            return Response(needed_response, content_type='application/json', status=status.HTTP_200_OK)
-        else:
-            return Response({'Error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        endpoint = "me"
+        session_key = self.request.session.session_key
+        response = spotify_api_requests(session_key, endpoint)
+        needed_response = {
+            'display_name': response.get('display_name'),
+            'followers': response.get('followers').get('total'),
+            'id': response.get('id'),
+            'image': response.get('images')[0].get('url')}
+        print(needed_response)
+        return Response(needed_response, content_type='application/json', status=status.HTTP_200_OK)
+    
 
-def handle_spotify_login(request, access_token, state=None):
-    profile = spotify_user_request(access_token, "me")
-    needed_response = {
-            'display_name': profile.get('display_name'),
-            'followers': profile.get('followers').get('total'),
-            'id': profile.get('id'),
-            'image': profile.get('images')[0].get('url')}
-    print(needed_response)
-    profile_id = profile.get('id')
-    user_id = User.objects.filter(username=profile_id)
-    if user_id:
-        token = SpotifyToken.objects.get(access_token = access_token)
-        user = user_id[0]
-        user.username = profile_id
-        user.access_token = token.access_token
-        user.refresh_token = token.refresh_token
-        user.expires_in = token.expires_in
-        user.save()
-        auth_backend = UsernameBackend()
-        user = auth_backend.authenticate(request, username=user.username)
-        if user:
-            login(request, user, backend='spotify.auth_backends.UsernameBackend')
-            print(f'User logged in: {user.username}')
-            if user.is_authenticated:
-                print(f'User {user.username} is authenticated')
+class PauseSong(APIView):
+    def put(self, response, format=None):
+        room_code = self.request.session.get('state')
+        room = RoomPrivate.objects.filter(code=room_code)
+        if room.exists():
+            room = room[0]
+            if self.request.session.session_key == room.host or room.guest_can_pause:
+                pause_song(room.host)
             else:
-                print(f'User {user.username} is not authenticated')
+                return Response({}, status=status.HTTP_204_NO_CONTENT)
         else:
-            print('Failed to authenticate user')
-    else:
-        user = User.objects.filter(username = state)
-        if user:
-            token = SpotifyToken.objects.get(access_token=access_token)
-            user = user[0]
-            user.username = profile_id
-            user.access_token = token.access_token
-            user.refresh_token = token.refresh_token
-            user.expires_in = token.expires_in
-            user.save()
-            auth_backend = UsernameBackend()
-            user = auth_backend.authenticate(request, username=user.username)
-            if user:
-                login(request, user, backend='spotify.auth_backends.UsernameBackend')
-                print(f'User logged in: {user.username}')
-                if user.is_authenticated:
-                    print(f'User {user.username} is authenticated')
-                else:
-                    print(f'User {user.username} is not authenticated')
+            pause_song(self.request.session.session_key)
+        return Response({}, status=status.HTTP_200_OK)
+    
+class PlaySong(APIView):
+    def put(self, response, format=None):
+        room_code = self.request.session.get('state')
+        room = RoomPrivate.objects.filter(code=room_code)
+        if room.exists():
+            room = room[0]
+            if self.request.session.session_key == room.host or room.guest_can_pause:
+                play_song(room.host)
             else:
-                print('Failed to authenticate user')
+                return Response({}, status=status.HTTP_204_NO_CONTENT)
         else:
-            print('No user to change name')
-    return needed_response
-        
+            play_song(self.request.session.session_key) 
+        return Response({}, status=status.HTTP_200_OK)
 
-def spotify_user_request(accessToken, endpoint, post_request=False, put_request=False):
-    headers = {'Content-Type': 'application/json',
-               'Authorization': "Bearer " + accessToken}
+def play_song(session_id):
+    return spotify_api_requests(session_id, "me/player/play", put_request=True)
 
-    if post_request:
-        post(BASE_URL + endpoint, headers=headers)
-    if put_request:
-        put(BASE_URL + endpoint, headers=headers)
 
-    response = get(BASE_URL + endpoint, {}, headers=headers)
-    try:
-        return response.json()
-    except:
-        return {'Error': 'Issue with request'}
+def pause_song(session_id):
+    return spotify_api_requests(session_id, "me/player/pause", put_request=True)

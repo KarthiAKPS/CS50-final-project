@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, useNavigate, Routes, Route, Link, Redirect } from 'react-router-dom';
+import MusicPlayer from './music' ;
 
 export default function Homepage() {
 
@@ -72,29 +73,15 @@ export default function Homepage() {
 
 
     const authenticate = useCallback(() => {
-
-        fetch('/apis/login')
-            .then((response) => {
-                if (!response.ok) {
-                    response.text().then((text) => {
-                        console.error('Error response body:', text);
-                    });
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
+        fetch("/spotify/get-auth-url")
+            .then((response) => response.json())
             .then((data) => {
-                console.log(data)
-                fetch("/spotify/get-auth-url")
-                    .then((response) => response.json())
-                    .then((data) => {
-                        window.location.replace(data.url);
-                    });;
-            })
-            .catch((error) => {
-                console.error('There has been a problem with your fetch operation:', error);
-            });
+                window.location.replace(data.url);
+            });;
+    }, []);
 
+    useEffect(() => {
+        is_auth();
     }, []);
 
     function is_auth() {
@@ -116,10 +103,6 @@ export default function Homepage() {
                 }
             })
             .then(data => setData(data));
-    }, []);
-
-    useEffect(() => {
-        is_auth();
     }, []);
 
     useEffect(() => {
@@ -162,7 +145,7 @@ export default function Homepage() {
             navigate(`/room/${roomCode}`);
         }).catch(error => {
             console.log(error);
-            alert('Room not found');
+            alert('Room not found or room expired');
         });
     }, [csrftoken]);
 
@@ -171,18 +154,20 @@ export default function Homepage() {
             {window.innerWidth > 640 ? (
                 <nav className="flex font-bold py-2 text-xl w-screen justify-evenly shadow-lg bg-gradient-to-b from-sky-300 to-sky-600 text-white">
                     {authenticateSpotify ? (
-                        <p>Hi, {spotifyUserData.display_name}</p>
+                        <div className="bg-black bg-opacity-100 rounded p-1">
+                        <p className="text-xl font-semibold text-green-500">Hi, {spotifyUserData.display_name}</p>
+                        </div>
                     ) : (
                         <Link onClick={authenticate}>Login</Link>
                     )}
-                    <Link to="/profile">Profile</Link>
-                    <Link to="/create">Create Room</Link>
-                    <Link to="/join">Join Room</Link>
+                    {authenticateSpotify && (<Link to="/profile">Profile</Link>)}
+                    {authenticateSpotify && (<Link to="/create">Create Room</Link>)}
+                    {authenticateSpotify && (<Link to="/join">Join Room</Link>)}
                 </nav>
             ) : (
                 <>
                     <div className={`fixed inset-0 z-50 h-full transition-transform duration-200 transform ${sidebarOpen ? 'block' : 'hidden'} sm:hidden`} onClick={() => setSidebarOpen(false)}>
-                        <nav style={{ width: '50vw' }} className={`fixed inset-y-0 h-full left-0 z-30 w-64 px- pt-5 pb-4 bg-gradient-to-b from-sky-300 to-sky-600 text-white transition-transform duration-200 transform overflow-y-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:static md:inset-0 md:overflow-visible sm:hidden`}>
+                        <nav style={{ width: '50vw' }} className={`fixed bg-opacity-80 inset-y-0 h-full left-0 z-30 w-64 px- pt-5 pb-4 bg-sky-700 text-white transition-transform duration-200 transform overflow-y-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:static md:inset-0 md:overflow-visible sm:hidden`}>
                             <div className="flex items-center justify-center px-4 md:hidden">
                                 <button className="p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-white" onClick={() => setSidebarOpen(false)}>
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -192,18 +177,18 @@ export default function Homepage() {
                             </div>
                             <div class="flex flex-col items-center justify-center mt-5">
                                 {authenticateSpotify ? (
-                                    <p className="mb-8 text-lg font-semibold">Hi, {spotifyUserData.display_name}</p>
+                                    <></>
                                 ) : (
-                                    <Link className="text-lg font-medium hover:underline" onClick={authenticate}>Login</Link>
+                                    <Link className="text-lg font-medium text-center hover:underline px-2 py-2 w-4/5 rounded-full bg-sky-800 hover:bg-gray-300" onClick={authenticate}>Login</Link>
                                 )}
                                 {authenticateSpotify &&
-                                    <Link className="mt-2 text-lg font-medium hover:underline" to="/profile">Profile</Link>
+                                    <Link className="mt-2 text-lg text-center font-medium hover:underline px-2 py-2 w-4/5 rounded-full bg-sky-800 hover:bg-gray-300" to="/profile">Profile</Link>
                                 }
                                 {authenticateSpotify &&
-                                    <Link className="mt-2 text-lg font-medium hover:underline" to="/create">Create Room</Link>
+                                    <Link className="mt-2 text-lg text-center font-medium hover:underline px-2 py-2 w-4/5 rounded-full bg-sky-800 hover:bg-gray-300" to="/create">Create Room</Link>
                                 }
                                 {authenticateSpotify &&
-                                    <Link className="mt-2 text-lg font-medium hover:underline" to="/join">Join Room</Link>
+                                    <Link className="mt-2 text-lg text-center font-medium hover:underline px-2 py-2 w-4/5 rounded-full bg-sky-800 hover:bg-gray-300" to="/join">Join Room</Link>
                                 }
                             </div>
                         </nav>
@@ -215,26 +200,23 @@ export default function Homepage() {
                             </svg>
                         </button>
                     </div>
+                    {authenticateSpotify ? (<div className="bg-black bg-opacity-100 rounded p-2 mx-auto w-fit">
+                                    <p className=" text-xl font-bold text-green-500">Hi, {spotifyUserData.display_name}</p>
+                                    </div>) : (<></>)}
                 </>
             )}
-            <div className='mx-8 flex gap-4 flex-col sm:flex-row'>
-                <div className='mx-auto my-2 mt-5 h-fit md:flex-grow rounded-md'>
-                    {<div className='mx-auto flex justify-center my-2 h-fit md:flex-grow'>
-                        <audio controls>
-                            <source src="song.mp3" type="audio/mpeg" />
-                            Your browser does not support the audio element.
-                        </audio>
-                    </div>}
-
+            
+            <div className='mx-8 flex gap-2 flex-col sm:flex-row'>
+                <div className='mx-auto my-2 mt-5 h-fit md:flex-grow w-auto bg-opacity-80 rounded-md shadow-lg'> 
+                <MusicPlayer authenticateSpotify />
                 </div>
-                <div className='mx-2 my-2 mt-5 sm:w-1/3 md:w-1/3 h-[calc(90vh-64px)] overflow-y-auto bg-opacity-60 rounded-md shadow-lg scrollbar-hide'>
+                <div className='mx-2 my-2 mt-5 sm:w-1/3 md:w-1/3 h-auto max-h-[calc(90vh-64px)] overflow-x-hidden overflow-y-auto bg-opacity-60 rounded-md shadow-lg scrollbar-hide'>
                     <div className='sticky top-0 z-10 text-center shadow-sm bg-gradient-to-b from-sky-300 to-sky-600 text-white text-2xl py-2 px-4 font-bold'>Rooms</div>
                     <div className='flex flex-col z-neg-1 gap-4 p-4'>
                         {data && data.map((item, index) => (
                             <div className='border-solid border-2 border-slate-200 bg-opacity-90 shadow-md rounded-md p-1' style={{ backgroundImage: `url(${item.playlist_cover})`, backgroundSize: 'cover', backdropFilter: 'blur(10px)' }}>
                                 <div>
                                     <h3 className='leading-loose border-b-2 border-solid border-gray-300 shadow-sm text-center font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 text-lg'>{item.name}</h3>
-                                    <p className='font-semibold leading-loose text-center'>{item.created_user}</p>
                                     <p className='text-sm leading-loose text-gray-500 font-italic text-center'>{
                                         timeSince(new Date(item.created_time))
                                     } ago

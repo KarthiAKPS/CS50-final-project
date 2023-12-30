@@ -69,6 +69,25 @@ export default function Room() {
             });
     }
 
+    useEffect(() => {
+        is_auth();
+    }, []);
+
+    function is_auth() {
+        fetch("/spotify/is-authenticated")
+            .then((response) => response.json())
+            .then((data) => {
+                setAuthenticateSpotify(data.status);
+                console.log(data.status);
+            })
+    };
+
+    useEffect(() => {
+        if(!authenticateSpotify) {
+            authenticate();
+        }
+    },[]);
+
     const leaveButton = (event) => {
         event.preventDefault();
         fetch('/apis/leave-room', {
@@ -115,7 +134,7 @@ export default function Room() {
                                             <i className="fa-solid fa-info-circle cursor-pointer" onClick={() => toggleInfo(!showInfo)}></i>
                                         </div>
                                     </div>
-                                    <div><MusicPlayer /></div>
+                                    <div className=' my-2 h-32 fixed bottom-0 left-1/2 transform -translate-x-1/2 w-auto bg-opacity-80 rounded-md shadow-lg'><MusicPlayer /></div>
                                     <div className="fixed bottom-0 left-0 right-0 mb-4 z-neg-1 flex items-center justify-center">
                                         {showInfo ? (
                                             <div className="inline-flex w-3/4 flex-col ml-4 bg-yellow-50 p-4 border-l-4 border-yellow-500 text-gray-700 rounded transition-all duration-500 ease-in-out transform opacity-100">

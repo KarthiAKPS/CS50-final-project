@@ -10,5 +10,4 @@ urlpatterns = [
     path("/in-room", views.InRoom.as_view(), name="in-room"),
     path("/leave-room", views.LeaveRoom.as_view(), name="leave-room"),
     path("/edit-room", views.EditRoom.as_view(), name="edit-room"),
-    path("/login", views.login, name="login"),
 ]

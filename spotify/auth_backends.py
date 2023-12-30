@@ -2,7 +2,7 @@ from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth import get_user_model
 
 class UsernameBackend(ModelBackend):
-    def authenticate(self, request, username=None, **kwargs):
+    def authenticate(self, username=None, **kwargs):
         User = get_user_model()
         try:
             user = User.objects.get(username=username)

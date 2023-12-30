@@ -19,9 +19,6 @@ def get_default_playlist():
 class User(AbstractUser):
     like_dislike_ratio = models.FloatField(default=0.5)
     code = models.CharField(max_length=8, unique=True, default=RoomCode)
-    refresh_token = models.CharField(max_length=150, null=True)
-    access_token = models.CharField(max_length=150, null=True)
-    expires_in = models.DateTimeField(default=timezone.now) 
     
 class Playlist(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -53,7 +50,7 @@ class RoomPublic(models.Model):
 class RoomPrivate(models.Model):
     name = models.CharField(max_length=255)
     host = models.CharField(max_length=50, unique=True)
-    created_user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
+    created_user = models.CharField(max_length=50, unique=True, default='default', null=True)
     code = models.CharField(max_length=8, unique=True, default=RoomCode)
     playlist = models.ForeignKey(Playlist, null=True, default=get_default_playlist, on_delete=models.CASCADE)
     created_time = models.DateTimeField(auto_now_add=True)
