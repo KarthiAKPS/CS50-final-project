@@ -10,6 +10,7 @@ module.exports = {
         'black' : '#000000',
       },
       backgroundColor: ['active'],
+
     },
   },
   plugins: [

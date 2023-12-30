@@ -2,27 +2,32 @@ from django.db import models
 import string
 import random
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 
 def RoomCode():
     l = 8;
     while True:
         code = ''.join(random.choice(string.ascii_letters+string.digits) for i in range(l))
-        if RoomPublic.objects.filter(code=code).count() == 0 or RoomPrivate.objects.filter(code=code).count():
+        if RoomPublic.objects.filter(code=code).count() == 0 or RoomPrivate.objects.filter(code=code).count() == 0 or User.objects.filter(code=code).count() == 0:
             break
     return code
 
+def get_default_playlist():
+    return Playlist.objects.get_or_create(name='default')[0]
+
 
 class User(AbstractUser):
-    spotify_id = models.CharField(max_length=255, unique=True, default=None, null=True)
-    email = models.EmailField()
     like_dislike_ratio = models.FloatField(default=0.5)
-    profile_pic = models.ImageField(upload_to='profile_pics', default='default.jpg')
-    
+    code = models.CharField(max_length=8, unique=True, default=RoomCode)
+    refresh_token = models.CharField(max_length=150, null=True)
+    access_token = models.CharField(max_length=150, null=True)
+    expires_in = models.DateTimeField(default=timezone.now) 
     
 class Playlist(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255, default='default_name')
+    name = models.CharField(max_length=255, default='default')
     spotify_playlist_id = models.CharField(max_length=255, default='default_id')
+    playlist_cover = models.ImageField(upload_to='cover pics', default='default_cover.jpg')
     
     
 class PlaylistSong(models.Model):
@@ -50,7 +55,7 @@ class RoomPrivate(models.Model):
     host = models.CharField(max_length=50, unique=True)
     created_user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
     code = models.CharField(max_length=8, unique=True, default=RoomCode)
-    playlist = models.ForeignKey(Playlist, null=True, on_delete=models.CASCADE)
+    playlist = models.ForeignKey(Playlist, null=True, default=get_default_playlist, on_delete=models.CASCADE)
     created_time = models.DateTimeField(auto_now_add=True)
     votes_to_skip = models.IntegerField(default=1)
     guest_can_pause = models.BooleanField(default=False)

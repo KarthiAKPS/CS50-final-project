@@ -52,7 +52,7 @@ export default function CreateRoom({updateRoomData, settingsShow = false, setSet
             })
         };
 
-        fetch('/apis/edit-room', request)
+        fetch('/apis/create-room', request)
             .then(response => response.json())
             .then(data => {
                 // Navigate to the new room

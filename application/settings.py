@@ -23,6 +23,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 INSTALLED_APPS = [
     'main',
     'frontend',
+    'spotify',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -52,6 +53,22 @@ INTERNAL_IPS = [
 
 # npm location
 NPM_BIN_PATH = "C:/Program Files/nodejs/npm.cmd"
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+    },
+    'root': {
+        'handlers': ['file'],
+        'level': 'DEBUG',
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -150,15 +167,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # for dev environment
 if DEBUG:
-    STATIC_URL = 'static/'
+    STATIC_URL = '/static/'
     STATIC_ROOT = os.path.join(BASE_DIR, 'statifiles_build', 'static')
     STATICFILES_DIRS = (
         BASE_DIR / 'frontend' / 'static',
         BASE_DIR / 'theme' / 'static',
         )
 
-MEDIA_URL ='media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'frontend', 'media')
+MEDIA_URL ='/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'frontend', 'static', 'frontend', 'media')
 
 # AWS Storage Bucket
 if not DEBUG:

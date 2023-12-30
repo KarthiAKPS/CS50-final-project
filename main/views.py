@@ -1,7 +1,5 @@
 from django.utils import timezone
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
-from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
@@ -10,6 +8,9 @@ from rest_framework import generics, status
 from .serializer import RoomSerializer, CreateRoomSerializer, EditRoomSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
+import random
+import string
+import json
 
 # Create your views here.
 
@@ -45,7 +46,7 @@ class CreateRoomView(APIView):
         if not self.request.session.exists(self.request.session.session_key):
             self.request.session.create()
               
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(data=self.request.data)
         if serializer.is_valid():
             guest_can_pause = serializer.data.get('guest_can_pause')
             name = serializer.data.get('name')
@@ -64,18 +65,22 @@ class CreateRoomView(APIView):
                self.request.session['code'] = room.code
                return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
             else:
+                room_code = User.objects.filter(username=self.request.session.get('state'))
+                if room_code != []:
+                    room_code = room_code[0]
                 room = RoomPrivate(
                     host=host,
                     guest_can_pause=guest_can_pause,
                     votes_to_skip=votes_to_skip,
                     created_time= timezone.now(),
-                    name =name,
-                    # created_user=request.user
+                    name = name,
+                    code = self.request.session.get('state'),
+                    created_user= self.request.user
                     )
                 self.request.session['code'] = room.code
                 room.save()
                     
-            return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
+            return Response(RoomSerializer(room).data, status=status.HTTP_201_CREATED)
         return Response({'Bad Request': 'Invalid data'}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -83,12 +88,17 @@ class InRoom(APIView):
     def get(self, request, format=None, *args, **kwargs):
         if not self.request.session.exists(self.request.session.session_key):
             self.request.session.create()
-        if self.request.session.get('code'):
-            data = {
-                'code': self.request.session.get('code')
-            }
-            return JsonResponse(data, status=status.HTTP_200_OK)
-        else:
+        try:
+            code = self.request.session.get('code')
+            if code != None:
+                data = {
+                'code': code
+                }
+                return JsonResponse(data, status=status.HTTP_200_OK)
+            else:
+                return Response({'message':'Room Not Found'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
             return Response({'message':'Room Not Found'}, status=status.HTTP_200_OK)
             
 class JoinRoom(APIView):
@@ -141,7 +151,7 @@ class EditRoom(APIView):
             serializer = self.serializer_class(data = request.data)
         else:
             return Response({"detail": "No data provided"}, status=400)
-        user = request.user
+        user = self.request.user
         if serializer.is_valid():
             name = serializer.data.get('name')
             guest_can_pause = serializer.data.get('guest_can_pause')
@@ -151,80 +161,43 @@ class EditRoom(APIView):
             room = RoomPrivate.objects.filter(code = code) # if room already exists
             if room.exists():
                 room = room[0]
-                #if user != serializer.data.get('created_user'):
-                    #return Response({'message': 'Not the host'}, status=status.HTTP_403_FORBIDDEN)
                 room.name = name
                 room.guest_can_pause = guest_can_pause
                 room.votes_to_skip = votes_to_skip
                 room.is_public = is_public
-                room.save(update_fields=['name', 'guest_can_pause', 'votes_to_skip', 'is_public'])
+                if room.created_user == user:
+                    room.save(update_fields=['name', 'guest_can_pause', 'votes_to_skip', 'is_public'])
+                else:
+                    return Response({'Bad Request': 'You are not the host of this room'}, status=status.HTTP_400_BAD_REQUEST)
                 self.request.session['code'] = room.code
                 return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
             return Response({'message': 'Room not found'}, status=status.HTTP_404_NOT_FOUND)
         return Response({'Bad Request.. serializer not valid': 'Error'}, status=status.HTTP_400_BAD_REQUEST)
+ 
+def R_c():
+    l = 8;
+    while True:
+        code = ''.join(random.choice(string.ascii_letters+string.digits) for i in range(l))
+        if RoomPublic.objects.filter(code=code).count() == 0 or RoomPrivate.objects.filter(code=code).count() == 0 or User.objects.filter(code=code).count() == 0:
+            break
+    return code   
+
+def login(request):
+    if not request.session.exists(request.session.session_key):
+        request.session.create()
     
-
-
-def login_view(request):
-    if request.method == "POST":
-
-        # Attempt to sign user in
-        username = request.POST["username"]
-        password = request.POST["password"]
-        user = authenticate(request, username=username, password=password)
-
-        # Check if authentication successful
-        if user is not None:
-            login(request, user)
-            return HttpResponseRedirect(reverse("index"))
-        else:
-            return render(request, "main/login.html", {
-                "message": "Invalid username and/or password."
-            })
-    else:
-        return render(request, "main/login.html")
-
-def logout_view(request):
-    logout(request)
-    return HttpResponseRedirect(reverse("index"))
-
-def register(request):
-    if request.method == "POST":
-        username = request.POST["username"]
-        email = request.POST["email"]
-
-        # Ensure password matches confirmation
-        password = request.POST["password"]
-        confirmation = request.POST["confirmation"]
-        if password != confirmation:
-            return render(request, "main/register.html", {
-                "message": "Passwords must match."
-            })
-
-        # Attempt to create new user
-        try:
-            user = User.objects.create_user(username, email, password)
-            user.save()
-        except IntegrityError:
-            return render(request, "auctions/register.html", {
-                "message": "Username already taken."
-            })
-        login(request, user)
-        return HttpResponseRedirect(reverse("index"))
-    else:
-        return render(request, "main/register.html")
+    c = request.session.get('u_code')
+    if c:
+        print('old code: ',c)
+    if c is None:
+        request.session['u_code'] = R_c()
+        code = request.session.get('u_code')
+        print('new code: ',code)
+        user = User(username = code, code = code)
+        user.save()
+        return HttpResponse(json.dumps({'message':'user created'}), content_type='application/json', status=200)
+    return HttpResponse(json.dumps({'message':request.session.get('u_code')}), content_type='application/json', status=200)
     
-# User Views
-def login_view(request):
-    if request.method == 'POST':
-        # Handle Spotify authentication and user login
-        ...
-    else:
-        return render(request, 'login.html')
-
-def logout_view(request):
-    logout(request)
-    return redirect('index')
 
 @login_required
 def user_profile_view(request):

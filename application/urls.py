@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("apis", include("main.urls")),
     path("", include("frontend.urls")),
+    path('spotify', include('spotify.urls')),
     path("__reload__/", include("django_browser_reload.urls")),
 ]
 
