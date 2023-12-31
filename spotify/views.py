@@ -11,6 +11,8 @@ from requests import post, put, get, Request
 from django.contrib.auth import authenticate, login
 import os
 from django.http import HttpResponse
+from .models import Vote
+import json
 
 BASE_URL = "https://api.spotify.com/v1/"
 
@@ -78,25 +80,40 @@ def refresh_spotify_token(session_id):
         session_id=session_id, access_token=access_token, token_type=token_type, expires_in=expires_in, refresh_token=new_refresh_token)
     
 
-def spotify_api_requests(session_id, endpoint, put_request=False):
+def spotify_api_requests(session_id, endpoint,  data={}, put_request=False, post_request=False):
     tokens = get_user_tokens(session_id)
+    if tokens is None:
+        return None
     headers = {'Content-Type': 'application/json',
                'Authorization': "Bearer " + tokens.access_token}
 
-    response = None
+    response_get = None
+    response_post = None
+    response_put = None
     if put_request:
-        response = put(BASE_URL + endpoint, headers=headers)
+        response_put = put(BASE_URL + endpoint, headers=headers, data=data)
+        print(response_put)
+        try:
+            print(response_put.json())
+            return response_put
+        except Exception as e:
+            print("Error:", e)
+            return None
+    elif post_request:
+        response_post = post(BASE_URL + endpoint, headers=headers)
+        print(response_post)
+        try:
+            return response_post
+        except Exception as e:
+            print("Error:", e)
+            return None
     else:
-        response = get(BASE_URL + endpoint, {}, headers=headers)
-
-    if response.status_code == 403:
-        print("Status Code:", response.status_code)
-        print(response.json()) 
-    try:
-        return response.json()
-    except Exception as e:
-        print("Error:", e)
-        return {'Error': 'Issue with request'}
+        response_get = get(BASE_URL + endpoint, {}, headers=headers)
+        try:
+            return response_get.json()
+        except Exception as e:
+            print("Error:", e)
+            return None
 
 class AuthURL(APIView):
     def get(self, request, format=None):
@@ -171,26 +188,35 @@ class CurrentSong(APIView):
         if not self.request.session.exists(self.request.session.session_key):
             self.request.session.create()
         room_code = self.request.session.get('state')
-        room = RoomPrivate.objects.filter(code=room_code)
-        if room.exists():
-            room = room[0]
+        rooms = RoomPrivate.objects.filter(code=room_code)
+        if rooms.exists():
+            room = rooms[0]
             host = room.host
             endpoint = "me/player/currently-playing"
+            v_t_s = room.votes_to_skip
             response = spotify_api_requests(host, endpoint)
+            
         else:
             host = self.request.session.session_key
             endpoint = "me/player/currently-playing"
+            votes = 1
+            v_t_s = 1
             response = spotify_api_requests(host, endpoint)
         
         if 'error' in response or 'item' not in response:
             return Response({}, status=status.HTTP_204_NO_CONTENT)
-
+        
+        
         item = response.get('item')
         duration = item.get('duration_ms')
         progress = response.get('progress_ms')
         album_cover = item.get('album').get('images')[0].get('url')
         is_playing = response.get('is_playing')
         song_id = item.get('id')
+        
+        if rooms.exists():
+            votes = len(Vote.objects.filter(room=room, song_id=song_id))
+            
 
         artist_string = ""
 
@@ -207,11 +233,23 @@ class CurrentSong(APIView):
             'time': progress,
             'image_url': album_cover,
             'is_playing': is_playing,
-            'votes': 0,
-            'id': song_id
+            'id': song_id,
+            'votes': votes,
+            'votes_required': v_t_s,
         }
         
+        if rooms.exists():
+            self.update_room_song(room, song_id)
+        
         return Response(song, content_type='application/json', status=status.HTTP_200_OK)
+        
+    def update_room_song(self, room, song_id):
+        current_song = room.current_song_id
+
+        if current_song != song_id:
+            room.current_song_id = song_id
+            room.save(update_fields=['current_song_id'])
+            Vote.objects.filter(room=room).delete()
 
 
 class UserProfile(APIView):
@@ -228,6 +266,16 @@ class UserProfile(APIView):
             'image': response.get('images')[0].get('url')}
         print(needed_response)
         return Response(needed_response, content_type='application/json', status=status.HTTP_200_OK)
+
+
+class Playlist(APIView):
+    def get(self, *args, **kwargs):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+        endpoint = "me/playlists"
+        session_key = self.request.session.session_key
+        response = spotify_api_requests(session_key, endpoint)
+        return Response(response, content_type='application/json', status=status.HTTP_200_OK)
     
 
 class PauseSong(APIView):
@@ -257,6 +305,35 @@ class PlaySong(APIView):
         else:
             play_song(self.request.session.session_key) 
         return Response({}, status=status.HTTP_200_OK)
+    
+    
+class SkipSong(APIView):
+    def post(self, request, format=None):
+        room_code = self.request.session.get('state')
+        rooms = RoomPrivate.objects.filter(code=room_code)
+        if rooms.exists():
+            room = rooms[0]
+            votes = Vote.objects.filter(room=room, song_id=room.current_song_id)
+            votes_needed = room.votes_to_skip
+            if self.request.session.session_key == room.host or len(votes) + 1 >= votes_needed:
+                votes.delete()
+                skip_song(room.host)
+            else:
+                if room.current_song_id is not None:
+                    vote = Vote(user=self.request.session.session_key, room=room, song_id=room.current_song_id)
+                    vote.save()
+                    return Response({}, status=status.HTTP_200_OK)
+                else:
+                    # Handle the case where current_song_id is null
+                    # For example, you could return an error response
+                    return Response({'message': 'Current song ID is null'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            votes = 1
+            votes_needed = 1
+            skip_song(self.request.session.session_key)
+
+        return Response({}, status.HTTP_204_NO_CONTENT)
+
 
 def play_song(session_id):
     return spotify_api_requests(session_id, "me/player/play", put_request=True)
@@ -264,3 +341,37 @@ def play_song(session_id):
 
 def pause_song(session_id):
     return spotify_api_requests(session_id, "me/player/pause", put_request=True)
+
+
+def skip_song(session_id):
+    return spotify_api_requests(session_id, "me/player/next", post_request=True)
+
+
+def play_playlist(session_id, playlist_id):
+    endpoint = "me/player/play"
+    data = {
+        "context_uri": f"spotify:playlist:{playlist_id}"
+    }
+    response = spotify_api_requests(session_id, endpoint, data=json.dumps(data), put_request=True)
+
+    return response
+
+
+class PlayPlaylist(APIView):
+    def post(self, request, playlist_id, format=None):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+            
+        room_code = self.request.session.get('state')
+        room = RoomPrivate.objects.filter(code=room_code)
+        endpoint = "me/player/play"
+        data = {
+            "context_uri": f"spotify:playlist:{playlist_id}"
+        }
+        if room.exists():
+            room = room[0]
+            response = spotify_api_requests(room.host, endpoint, data=json.dumps(data), put_request=True)
+        else:
+            return Response({'message':'not in a room'}, status=status.HTTP_204_NO_CONTENT)
+        
+        return Response(response, content_type='application/json', status=status.HTTP_200_OK)

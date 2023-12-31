@@ -9,6 +9,7 @@ export default function Homepage() {
     const [authenticateSpotify, setAuthenticateSpotify] = useState(false);
     const [spotifyUserData, setSpotifyUserData] = useState({});
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [song, setSong] = useState(null);
 
     const getCsrfToken = () => {
         const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken'));
@@ -206,9 +207,11 @@ export default function Homepage() {
                 </>
             )}
             
-            <div className='mx-8 flex gap-2 flex-col sm:flex-row'>
-                <div className='mx-auto my-2 mt-5 h-fit md:flex-grow w-auto bg-opacity-80 rounded-md shadow-lg'> 
-                <MusicPlayer authenticateSpotify />
+            <div className='mx-8 flex gap-2 flex-col sm:flex-row '>
+                <div className="md:flex-grow">
+                <div className='mx-auto my-2 mt-5 w-fit h-fit bg-opacity-80 rounded-md shadow-lg'> 
+                <MusicPlayer song={song} setSong={setSong} />
+                </div>
                 </div>
                 <div className='mx-2 my-2 mt-5 sm:w-1/3 md:w-1/3 h-auto max-h-[calc(90vh-64px)] overflow-x-hidden overflow-y-auto bg-opacity-60 rounded-md shadow-lg scrollbar-hide'>
                     <div className='sticky top-0 z-10 text-center shadow-sm bg-gradient-to-b from-sky-300 to-sky-600 text-white text-2xl py-2 px-4 font-bold'>Rooms</div>

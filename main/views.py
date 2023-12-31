@@ -117,6 +117,7 @@ class JoinRoom(APIView):
             room = RoomPrivate.objects.filter(code=code)
             if len(room)!=0:
                 room = room[0]
+                self.request.session['state'] = code
                 self.request.session['code'] = code
                 return Response({'message':'Room Joined!'}, status=status.HTTP_200_OK)
             else:
