@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
-from .models import RoomPublic, User, Playlist, RoomPrivate, PlaylistSong, UserAction
+from .models import Playlist, User, RoomPrivate
 from rest_framework import generics, status
 from .serializer import RoomSerializer, CreateRoomSerializer, EditRoomSerializer
 from rest_framework.views import APIView
@@ -194,7 +194,7 @@ def R_c():
     l = 8;
     while True:
         code = ''.join(random.choice(string.ascii_letters+string.digits) for i in range(l))
-        if RoomPublic.objects.filter(code=code).count() == 0 or RoomPrivate.objects.filter(code=code).count() == 0 or User.objects.filter(code=code).count() == 0:
+        if RoomPrivate.objects.filter(code=code).count() == 0 or User.objects.filter(code=code).count() == 0:
             break
     return code   
 
